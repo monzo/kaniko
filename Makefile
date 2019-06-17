@@ -26,7 +26,6 @@ GOARCH = amd64
 ORG := github.com/GoogleContainerTools
 PROJECT := kaniko
 REGISTRY?=gcr.io/kaniko-project
-
 REPOPATH ?= $(ORG)/$(PROJECT)
 
 GO_FILES := $(shell find . -type f -name '*.go' -not -path "./vendor/*")
@@ -37,6 +36,7 @@ GO_LDFLAGS += '
 
 EXECUTOR_PACKAGE = $(REPOPATH)/cmd/executor
 WARMER_PACKAGE = $(REPOPATH)/cmd/warmer
+SERVER_PACKAGE = $(REPOPATH)/cmd/server
 KANIKO_PROJECT = $(REPOPATH)/kaniko
 
 out/executor: $(GO_FILES)
@@ -44,6 +44,9 @@ out/executor: $(GO_FILES)
 
 out/warmer: $(GO_FILES)
 	GOARCH=$(GOARCH) GOOS=linux CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -o $@ $(WARMER_PACKAGE)
+
+out/server: $(GO_FILES)
+	GOARCH=$(GOARCH) GOOS=linux CGO_ENABLED=0 go build -ldflags $(GO_LDFLAGS) -o $@ $(SERVER_PACKAGE)
 
 .PHONY: test
 test: out/executor
@@ -58,3 +61,7 @@ images:
 	docker build -t $(REGISTRY)/executor:latest -f deploy/Dockerfile .
 	docker build -t $(REGISTRY)/executor:debug -f deploy/Dockerfile_debug .
 	docker build -t $(REGISTRY)/warmer:latest -f deploy/Dockerfile_warmer .
+
+MONZO_REGISTRY?=442690283804.dkr.ecr.eu-west-1.amazonaws.com/monzo/kaniko
+server: out/server
+	docker build -t $(MONZO_REGISTRY):server-latest -f deploy/Dockerfile_server .
